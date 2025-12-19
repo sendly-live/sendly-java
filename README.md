@@ -13,16 +13,22 @@ Official Java SDK for the Sendly SMS API.
 
 ```xml
 <dependency>
-    <groupId>com.sendly</groupId>
+    <groupId>live.sendly</groupId>
     <artifactId>sendly-java</artifactId>
     <version>3.0.1</version>
 </dependency>
 ```
 
-### Gradle
+### Gradle (Groovy)
 
 ```groovy
-implementation 'com.sendly:sendly-java:3.0.1'
+implementation 'live.sendly:sendly-java:3.0.1'
+```
+
+### Gradle (Kotlin)
+
+```kotlin
+implementation("live.sendly:sendly-java:3.0.1")
 ```
 
 ## Quick Start

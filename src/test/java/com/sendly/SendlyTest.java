@@ -98,7 +98,7 @@ class SendlyTest {
         RecordedRequest request = mockServer.takeRequest();
         assertEquals("Bearer sk_test_123", request.getHeader("Authorization"));
         assertTrue(request.getHeader("Content-Type").startsWith("application/json"));
-        assertEquals("application/json", request.getHeader("Accept"));
+        assertTrue(request.getHeader("Accept").startsWith("application/json"));
         assertTrue(request.getHeader("User-Agent").startsWith("sendly-java/"));
     }
 

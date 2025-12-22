@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.sendly.exceptions.*;
 import com.sendly.resources.Messages;
+import com.sendly.resources.WebhooksResource;
+import com.sendly.resources.AccountResource;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -34,6 +36,8 @@ public class Sendly {
     private final Gson gson;
     private final int maxRetries;
     private final Messages messages;
+    private final WebhooksResource webhooks;
+    private final AccountResource account;
 
     /**
      * Create a new Sendly client with default settings.
@@ -70,6 +74,8 @@ public class Sendly {
                 .create();
 
         this.messages = new Messages(this);
+        this.webhooks = new WebhooksResource(this);
+        this.account = new AccountResource(this);
     }
 
     /**
@@ -79,6 +85,24 @@ public class Sendly {
      */
     public Messages messages() {
         return messages;
+    }
+
+    /**
+     * Get the Webhooks resource.
+     *
+     * @return Webhooks resource
+     */
+    public WebhooksResource webhooks() {
+        return webhooks;
+    }
+
+    /**
+     * Get the Account resource.
+     *
+     * @return Account resource
+     */
+    public AccountResource account() {
+        return account;
     }
 
     /**
@@ -125,6 +149,30 @@ public class Sendly {
         Request request = new Request.Builder()
                 .url(baseUrl + path)
                 .post(requestBody)
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("User-Agent", "sendly-java/" + VERSION)
+                .build();
+
+        return executeWithRetry(request);
+    }
+
+    /**
+     * Make a PATCH request.
+     *
+     * @param path API endpoint path
+     * @param body Request body
+     * @return Response as JsonObject
+     * @throws SendlyException if the request fails
+     */
+    public JsonObject patch(String path, Object body) throws SendlyException {
+        String json = gson.toJson(body);
+        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(baseUrl + path)
+                .patch(requestBody)
                 .addHeader("Authorization", "Bearer " + apiKey)
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Accept", "application/json")

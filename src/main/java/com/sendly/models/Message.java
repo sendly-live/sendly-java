@@ -10,19 +10,41 @@ import java.time.format.DateTimeParseException;
  * Represents an SMS message.
  */
 public class Message {
+    // Message status constants (sending removed - doesn't exist in database)
     public static final String STATUS_QUEUED = "queued";
-    public static final String STATUS_SENDING = "sending";
     public static final String STATUS_SENT = "sent";
     public static final String STATUS_DELIVERED = "delivered";
     public static final String STATUS_FAILED = "failed";
 
+    // Sender type constants
+    public static final String SENDER_TYPE_NUMBER_POOL = "number_pool";
+    public static final String SENDER_TYPE_ALPHANUMERIC = "alphanumeric";
+    public static final String SENDER_TYPE_SANDBOX = "sandbox";
+
     private final String id;
     private final String to;
+    private final String from;
     private final String text;
     private final String status;
+    private final String direction;
+    private final int segments;
 
     @SerializedName("credits_used")
     private final int creditsUsed;
+
+    @SerializedName("is_sandbox")
+    private final boolean isSandbox;
+
+    @SerializedName("sender_type")
+    private final String senderType;
+
+    @SerializedName("telnyx_message_id")
+    private final String telnyxMessageId;
+
+    private final String warning;
+
+    @SerializedName("sender_note")
+    private final String senderNote;
 
     @SerializedName("created_at")
     private final Instant createdAt;
@@ -45,18 +67,38 @@ public class Message {
     public Message(JsonObject json) {
         this.id = getStringOrNull(json, "id");
         this.to = getStringOrNull(json, "to");
+        this.from = getStringOrNull(json, "from");
         this.text = getStringOrNull(json, "text");
         this.status = getStringOrNull(json, "status");
-        this.creditsUsed = json.has("credits_used") ? json.get("credits_used").getAsInt() : 0;
-        this.createdAt = parseInstant(getStringOrNull(json, "created_at"));
-        this.updatedAt = parseInstant(getStringOrNull(json, "updated_at"));
-        this.deliveredAt = parseInstant(getStringOrNull(json, "delivered_at"));
-        this.errorCode = getStringOrNull(json, "error_code");
-        this.errorMessage = getStringOrNull(json, "error_message");
+        this.direction = json.has("direction") ? json.get("direction").getAsString() : "outbound";
+        this.segments = json.has("segments") ? json.get("segments").getAsInt() : 1;
+        this.creditsUsed = json.has("credits_used") || json.has("creditsUsed") ?
+            (json.has("credits_used") ? json.get("credits_used").getAsInt() : json.get("creditsUsed").getAsInt()) : 0;
+        this.isSandbox = json.has("is_sandbox") || json.has("isSandbox") ?
+            (json.has("is_sandbox") ? json.get("is_sandbox").getAsBoolean() : json.get("isSandbox").getAsBoolean()) : false;
+        this.senderType = getStringOrNull(json, "sender_type", "senderType");
+        this.telnyxMessageId = getStringOrNull(json, "telnyx_message_id", "telnyxMessageId");
+        this.warning = getStringOrNull(json, "warning");
+        this.senderNote = getStringOrNull(json, "sender_note", "senderNote");
+        this.createdAt = parseInstant(getStringOrNull(json, "created_at", "createdAt"));
+        this.updatedAt = parseInstant(getStringOrNull(json, "updated_at", "updatedAt"));
+        this.deliveredAt = parseInstant(getStringOrNull(json, "delivered_at", "deliveredAt"));
+        this.errorCode = getStringOrNull(json, "error_code", "errorCode");
+        this.errorMessage = getStringOrNull(json, "error_message", "errorMessage");
     }
 
     private String getStringOrNull(JsonObject json, String key) {
         return json.has(key) && !json.get(key).isJsonNull() ? json.get(key).getAsString() : null;
+    }
+
+    private String getStringOrNull(JsonObject json, String key1, String key2) {
+        if (json.has(key1) && !json.get(key1).isJsonNull()) {
+            return json.get(key1).getAsString();
+        }
+        if (json.has(key2) && !json.get(key2).isJsonNull()) {
+            return json.get(key2).getAsString();
+        }
+        return null;
     }
 
     private Instant parseInstant(String value) {
@@ -78,6 +120,10 @@ public class Message {
         return to;
     }
 
+    public String getFrom() {
+        return from;
+    }
+
     public String getText() {
         return text;
     }
@@ -86,8 +132,36 @@ public class Message {
         return status;
     }
 
+    public String getDirection() {
+        return direction;
+    }
+
+    public int getSegments() {
+        return segments;
+    }
+
     public int getCreditsUsed() {
         return creditsUsed;
+    }
+
+    public boolean isSandbox() {
+        return isSandbox;
+    }
+
+    public String getSenderType() {
+        return senderType;
+    }
+
+    public String getTelnyxMessageId() {
+        return telnyxMessageId;
+    }
+
+    public String getWarning() {
+        return warning;
+    }
+
+    public String getSenderNote() {
+        return senderNote;
     }
 
     public Instant getCreatedAt() {
@@ -130,9 +204,7 @@ public class Message {
      * Check if the message is pending.
      */
     public boolean isPending() {
-        return STATUS_QUEUED.equals(status) ||
-               STATUS_SENDING.equals(status) ||
-               STATUS_SENT.equals(status);
+        return STATUS_QUEUED.equals(status) || STATUS_SENT.equals(status);
     }
 
     @Override
@@ -140,7 +212,9 @@ public class Message {
         return "Message{" +
                 "id='" + id + '\'' +
                 ", to='" + to + '\'' +
+                ", from='" + from + '\'' +
                 ", status='" + status + '\'' +
+                ", direction='" + direction + '\'' +
                 ", creditsUsed=" + creditsUsed +
                 '}';
     }

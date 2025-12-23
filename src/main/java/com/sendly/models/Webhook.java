@@ -18,10 +18,16 @@ public class Webhook {
     public static final String CIRCUIT_OPEN = "open";
     public static final String CIRCUIT_HALF_OPEN = "half_open";
 
+    // Mode constants
+    public static final String MODE_ALL = "all";
+    public static final String MODE_TEST = "test";
+    public static final String MODE_LIVE = "live";
+
     private final String id;
     private final String url;
     private final List<String> events;
     private final String description;
+    private final String mode;
     private final boolean isActive;
     private final int failureCount;
     private final Instant lastFailureAt;
@@ -41,6 +47,7 @@ public class Webhook {
         this.url = getStringOrNull(json, "url");
         this.events = parseEvents(json);
         this.description = getStringOrNull(json, "description");
+        this.mode = getStringOrDefault(json, "mode", "mode", MODE_ALL);
         this.isActive = getBooleanOrDefault(json, "is_active", "isActive", false);
         this.failureCount = getIntOrDefault(json, "failure_count", "failureCount", 0);
         this.lastFailureAt = parseInstant(getStringOrNull(json, "last_failure_at", "lastFailureAt"));
@@ -121,6 +128,7 @@ public class Webhook {
     public String getUrl() { return url; }
     public List<String> getEvents() { return events; }
     public String getDescription() { return description; }
+    public String getMode() { return mode; }
     public boolean isActive() { return isActive; }
     public int getFailureCount() { return failureCount; }
     public Instant getLastFailureAt() { return lastFailureAt; }

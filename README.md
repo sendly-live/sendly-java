@@ -144,6 +144,59 @@ System.out.println(message.getStatus());
 System.out.println(message.getDeliveredAt());
 ```
 
+### Scheduling Messages
+
+```java
+// Schedule a message for future delivery
+ScheduledMessage scheduled = client.messages().schedule(
+    ScheduleMessageRequest.builder()
+        .to("+15551234567")
+        .text("Your appointment is tomorrow!")
+        .scheduledAt("2025-01-15T10:00:00Z")
+        .build()
+);
+
+System.out.println(scheduled.getId());
+System.out.println(scheduled.getScheduledAt());
+
+// List scheduled messages
+ScheduledMessageList result = client.messages().listScheduled();
+for (ScheduledMessage msg : result) {
+    System.out.println(msg.getId() + ": " + msg.getScheduledAt());
+}
+
+// Get a specific scheduled message
+ScheduledMessage msg = client.messages().getScheduled("sched_xxx");
+
+// Cancel a scheduled message (refunds credits)
+CancelScheduledMessageResponse cancel = client.messages().cancelScheduled("sched_xxx");
+System.out.println("Refunded: " + cancel.getCreditsRefunded() + " credits");
+```
+
+### Batch Messages
+
+```java
+// Send multiple messages in one API call (up to 1000)
+BatchMessageResponse batch = client.messages().sendBatch(
+    SendBatchRequest.builder()
+        .addMessage("+15551234567", "Hello User 1!")
+        .addMessage("+15559876543", "Hello User 2!")
+        .addMessage("+15551112222", "Hello User 3!")
+        .build()
+);
+
+System.out.println(batch.getBatchId());
+System.out.println("Queued: " + batch.getQueued());
+System.out.println("Failed: " + batch.getFailed());
+System.out.println("Credits used: " + batch.getCreditsUsed());
+
+// Get batch status
+BatchMessageResponse status = client.messages().getBatch("batch_xxx");
+
+// List all batches
+BatchList batches = client.messages().listBatches();
+```
+
 ### Iterate All Messages
 
 ```java
@@ -159,6 +212,70 @@ for (Message message : client.messages().each(
         .build()
 )) {
     System.out.println("Delivered: " + message.getId());
+}
+```
+
+## Webhooks
+
+```java
+// Create a webhook endpoint
+Webhook webhook = client.webhooks().create(
+    CreateWebhookRequest.builder()
+        .url("https://example.com/webhooks/sendly")
+        .events(Arrays.asList("message.delivered", "message.failed"))
+        .build()
+);
+
+System.out.println(webhook.getId());
+System.out.println(webhook.getSecret()); // Store securely!
+
+// List all webhooks
+List<Webhook> webhooks = client.webhooks().list();
+
+// Get a specific webhook
+Webhook wh = client.webhooks().get("whk_xxx");
+
+// Update a webhook
+client.webhooks().update("whk_xxx",
+    UpdateWebhookRequest.builder()
+        .url("https://new-endpoint.example.com/webhook")
+        .events(Arrays.asList("message.delivered", "message.failed", "message.sent"))
+        .build()
+);
+
+// Test a webhook
+WebhookTestResult result = client.webhooks().test("whk_xxx");
+
+// Rotate webhook secret
+WebhookSecretRotation rotation = client.webhooks().rotateSecret("whk_xxx");
+
+// Delete a webhook
+client.webhooks().delete("whk_xxx");
+```
+
+## Account & Credits
+
+```java
+// Get account information
+Account account = client.account().get();
+System.out.println(account.getEmail());
+
+// Check credit balance
+Credits credits = client.account().getCredits();
+System.out.println("Available: " + credits.getAvailableBalance() + " credits");
+System.out.println("Reserved: " + credits.getReservedBalance() + " credits");
+System.out.println("Total: " + credits.getBalance() + " credits");
+
+// View credit transaction history
+CreditTransactionList transactions = client.account().getCreditTransactions();
+for (CreditTransaction tx : transactions) {
+    System.out.println(tx.getType() + ": " + tx.getAmount() + " credits - " + tx.getDescription());
+}
+
+// List API keys
+ApiKeyList keys = client.account().listApiKeys();
+for (ApiKey key : keys) {
+    System.out.println(key.getName() + ": " + key.getPrefix() + "*** (" + key.getType() + ")");
 }
 ```
 

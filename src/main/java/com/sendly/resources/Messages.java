@@ -7,6 +7,7 @@ import com.sendly.exceptions.ValidationException;
 import com.sendly.models.BatchList;
 import com.sendly.models.BatchMessageItem;
 import com.sendly.models.BatchMessageResponse;
+import com.sendly.models.BatchPreviewResponse;
 import com.sendly.models.CancelScheduledMessageResponse;
 import com.sendly.models.ListBatchesRequest;
 import com.sendly.models.ListMessagesRequest;

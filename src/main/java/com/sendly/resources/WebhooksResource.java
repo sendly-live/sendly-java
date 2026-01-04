@@ -165,6 +165,29 @@ public class WebhooksResource {
         client.post("/webhooks/" + webhookId + "/deliveries/" + deliveryId + "/retry", new JsonObject());
     }
 
+    /**
+     * List available webhook event types.
+     *
+     * @return List of event type strings
+     * @throws SendlyException if the request fails
+     */
+    public List<String> listEventTypes() throws SendlyException {
+        JsonObject response = client.get("/webhooks/event-types", null);
+        List<String> eventTypes = new ArrayList<>();
+
+        if (response.has("events") && response.get("events").isJsonArray()) {
+            JsonArray events = response.getAsJsonArray("events");
+            for (int i = 0; i < events.size(); i++) {
+                JsonObject event = events.get(i).getAsJsonObject();
+                if (event.has("type")) {
+                    eventTypes.add(event.get("type").getAsString());
+                }
+            }
+        }
+
+        return eventTypes;
+    }
+
     private void validateWebhookId(String webhookId) {
         if (webhookId == null || !webhookId.startsWith("whk_")) {
             throw new ValidationException("Invalid webhook ID format");

@@ -289,6 +289,28 @@ public class Messages {
         return new BatchList(response);
     }
 
+    /**
+     * Preview a batch without sending (dry run).
+     *
+     * @param request Batch send request
+     * @return The preview response showing what would happen
+     * @throws SendlyException if the request fails
+     */
+    public BatchPreviewResponse previewBatch(SendBatchRequest request) throws SendlyException {
+        if (request.getMessages() == null || request.getMessages().isEmpty()) {
+            throw new ValidationException("At least one message is required");
+        }
+
+        // Validate each message in the batch
+        for (BatchMessageItem item : request.getMessages()) {
+            validatePhone(item.getTo());
+            validateText(item.getText());
+        }
+
+        JsonObject response = client.post("/messages/batch/preview", request);
+        return new BatchPreviewResponse(response);
+    }
+
     // ==================== Validation Helpers ====================
 
     private void validatePhone(String phone) throws ValidationException {

@@ -15,20 +15,20 @@ Official Java SDK for the Sendly SMS API.
 <dependency>
     <groupId>live.sendly</groupId>
     <artifactId>sendly-java</artifactId>
-    <version>3.0.1</version>
+    <version>3.7.0</version>
 </dependency>
 ```
 
 ### Gradle (Groovy)
 
 ```groovy
-implementation 'live.sendly:sendly-java:3.0.1'
+implementation 'live.sendly:sendly-java:3.7.0'
 ```
 
 ### Gradle (Kotlin)
 
 ```kotlin
-implementation("live.sendly:sendly-java:3.0.1")
+implementation("live.sendly:sendly-java:3.7.0")
 ```
 
 ## Quick Start
@@ -195,6 +195,16 @@ BatchMessageResponse status = client.messages().getBatch("batch_xxx");
 
 // List all batches
 BatchList batches = client.messages().listBatches();
+
+// Preview batch (dry run) - validates without sending
+BatchPreviewResponse preview = client.messages().previewBatch(
+    SendBatchRequest.builder()
+        .addMessage("+15551234567", "Hello User 1!")
+        .addMessage("+447700900123", "Hello UK!")
+        .build()
+);
+System.out.println("Total credits needed: " + preview.getTotalCredits());
+System.out.println("Valid: " + preview.getValid() + ", Invalid: " + preview.getInvalid());
 ```
 
 ### Iterate All Messages
@@ -251,6 +261,12 @@ WebhookSecretRotation rotation = client.webhooks().rotateSecret("whk_xxx");
 
 // Delete a webhook
 client.webhooks().delete("whk_xxx");
+
+// List available webhook event types
+List<String> eventTypes = client.webhooks().listEventTypes();
+for (String eventType : eventTypes) {
+    System.out.println("Event: " + eventType);
+}
 ```
 
 ## Account & Credits
@@ -277,6 +293,26 @@ ApiKeyList keys = client.account().listApiKeys();
 for (ApiKey key : keys) {
     System.out.println(key.getName() + ": " + key.getPrefix() + "*** (" + key.getType() + ")");
 }
+
+// Get a specific API key
+ApiKey key = client.account().getApiKey("key_xxx");
+
+// Get API key usage stats
+ApiKeyUsage usage = client.account().getApiKeyUsage("key_xxx");
+System.out.println("Messages sent: " + usage.getMessagesSent());
+
+// Create a new API key
+ApiKey newKey = client.account().createApiKey(
+    CreateApiKeyRequest.builder()
+        .name("Production Key")
+        .type("live")
+        .scopes(Arrays.asList("sms:send", "sms:read"))
+        .build()
+);
+System.out.println("New key: " + newKey.getKey()); // Only shown once!
+
+// Revoke an API key
+client.account().revokeApiKey("key_xxx");
 ```
 
 ## Error Handling

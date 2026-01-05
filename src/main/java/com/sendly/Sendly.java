@@ -7,6 +7,8 @@ import com.sendly.exceptions.*;
 import com.sendly.resources.Messages;
 import com.sendly.resources.WebhooksResource;
 import com.sendly.resources.AccountResource;
+import com.sendly.resources.VerifyResource;
+import com.sendly.resources.TemplatesResource;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -38,6 +40,8 @@ public class Sendly {
     private final Messages messages;
     private final WebhooksResource webhooks;
     private final AccountResource account;
+    private final VerifyResource verify;
+    private final TemplatesResource templates;
 
     /**
      * Create a new Sendly client with default settings.
@@ -76,6 +80,8 @@ public class Sendly {
         this.messages = new Messages(this);
         this.webhooks = new WebhooksResource(this);
         this.account = new AccountResource(this);
+        this.verify = new VerifyResource(this);
+        this.templates = new TemplatesResource(this);
     }
 
     /**
@@ -103,6 +109,58 @@ public class Sendly {
      */
     public AccountResource account() {
         return account;
+    }
+
+    /**
+     * Get the Verify resource.
+     *
+     * @return Verify resource
+     */
+    public VerifyResource verify() {
+        return verify;
+    }
+
+    /**
+     * Get the Templates resource.
+     *
+     * @return Templates resource
+     */
+    public TemplatesResource templates() {
+        return templates;
+    }
+
+    /**
+     * Make a typed request (generic method for resources).
+     *
+     * @param method HTTP method (GET, POST, PATCH, DELETE)
+     * @param path   API endpoint path
+     * @param body   Request body (can be null)
+     * @param clazz  Response class type
+     * @return Typed response object
+     * @throws SendlyException if the request fails
+     */
+    public <T> T request(String method, String path, Object body, Class<T> clazz) throws SendlyException {
+        JsonObject response;
+        switch (method.toUpperCase()) {
+            case "GET":
+                response = get(path, null);
+                break;
+            case "POST":
+                response = post(path, body);
+                break;
+            case "PATCH":
+                response = patch(path, body);
+                break;
+            case "DELETE":
+                response = delete(path);
+                break;
+            default:
+                throw new SendlyException("Unsupported HTTP method: " + method);
+        }
+        if (clazz == Void.class) {
+            return null;
+        }
+        return gson.fromJson(response, clazz);
     }
 
     /**

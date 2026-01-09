@@ -15,6 +15,7 @@ public class Message {
     public static final String STATUS_SENT = "sent";
     public static final String STATUS_DELIVERED = "delivered";
     public static final String STATUS_FAILED = "failed";
+    public static final String STATUS_BOUNCED = "bounced";
 
     // Sender type constants
     public static final String SENDER_TYPE_NUMBER_POOL = "number_pool";
@@ -198,6 +199,13 @@ public class Message {
      */
     public boolean isFailed() {
         return STATUS_FAILED.equals(status);
+    }
+
+    /**
+     * Check if the message bounced (carrier rejected).
+     */
+    public boolean isBounced() {
+        return STATUS_BOUNCED.equals(status);
     }
 
     /**

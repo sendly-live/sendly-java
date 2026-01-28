@@ -9,6 +9,8 @@ import com.sendly.resources.WebhooksResource;
 import com.sendly.resources.AccountResource;
 import com.sendly.resources.VerifyResource;
 import com.sendly.resources.TemplatesResource;
+import com.sendly.resources.CampaignsResource;
+import com.sendly.resources.ContactsResource;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -42,6 +44,8 @@ public class Sendly {
     private final AccountResource account;
     private final VerifyResource verify;
     private final TemplatesResource templates;
+    private final CampaignsResource campaigns;
+    private final ContactsResource contacts;
 
     /**
      * Create a new Sendly client with default settings.
@@ -82,6 +86,8 @@ public class Sendly {
         this.account = new AccountResource(this);
         this.verify = new VerifyResource(this);
         this.templates = new TemplatesResource(this);
+        this.campaigns = new CampaignsResource(this);
+        this.contacts = new ContactsResource(this);
     }
 
     /**
@@ -127,6 +133,24 @@ public class Sendly {
      */
     public TemplatesResource templates() {
         return templates;
+    }
+
+    /**
+     * Get the Campaigns resource.
+     *
+     * @return Campaigns resource
+     */
+    public CampaignsResource campaigns() {
+        return campaigns;
+    }
+
+    /**
+     * Get the Contacts resource.
+     *
+     * @return Contacts resource
+     */
+    public ContactsResource contacts() {
+        return contacts;
     }
 
     /**

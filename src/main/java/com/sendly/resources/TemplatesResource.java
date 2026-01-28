@@ -81,4 +81,22 @@ public class TemplatesResource {
         }
         return client.request("POST", "/templates/" + templateId + "/preview", body, TemplatePreview.class);
     }
+
+    /**
+     * Clone a template.
+     */
+    public Template clone(String templateId) throws SendlyException {
+        return client.request("POST", "/templates/" + templateId + "/clone", null, Template.class);
+    }
+
+    /**
+     * Clone a template with a new name.
+     */
+    public Template clone(String templateId, String name) throws SendlyException {
+        Map<String, Object> body = new HashMap<>();
+        if (name != null) {
+            body.put("name", name);
+        }
+        return client.request("POST", "/templates/" + templateId + "/clone", body, Template.class);
+    }
 }

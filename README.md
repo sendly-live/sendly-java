@@ -445,16 +445,111 @@ Send branded rich messaging — cards and suggestion chips — through the same
 automatically for recipients whose device can't receive RCS.
 
 > **Note**: RCS is gated behind the `rcs_channel` rollout flag (default-dark).
-> Calls return a `not_found` error until the flag is on for your account. Sends
-> and capability checks require a live API key.
+> Registration calls return a 404 `rcs_not_enabled` error and sends a
+> `not_found` error until the flag is on for your account. Registration needs
+> an API key with the `rcs:read` / `rcs:write` scopes; sends and capability
+> checks require a live API key.
+
+### Register a brand and agent
+
+Registration is self-serve, from the dashboard or the API. You draft a brand
+(your business identity) and an agent (what recipients see), submit them for
+review by Sendly, and Sendly passes them to the carrier network. Once the
+agent reaches the `testing` stage it can message invited test devices; request
+launch when testing is done, and after launch review it reaches everyone.
+
+Assets can't be uploaded over the API: logo, hero and call-to-action media
+must already be public `https://` URLs. Upload files from the dashboard
+instead.
 
 ```java
-// 1. Find your agent — the brand identity your messages are sent as. Contact
-//    support to register one; "testing" reaches invited test numbers only,
+// 1. Prefill from what's already on file (10DLC brand or toll-free
+//    verification), complete it, and draft the brand. Only US businesses for
+//    now: a non-US address is refused with rcs_us_only.
+RcsDossier dossier = client.rcs().dossier().get();
+RcsBrand brand = client.rcs().brands().create(dossier.getBrand().toBuilder()
+    .displayName("Acme")
+    .legalEntityType(RcsLegalEntityType.LIMITED_LIABILITY_COMPANY)
+    .address(RcsBrandAddress.builder()
+        .line1("1 Main St").city("Chicago").state("IL").postalCode("60601").countryCode("US")
+        .build())
+    .contact(RcsBrandContact.builder()
+        .firstName("Sam").lastName("Lee").email("sam@acme.example").phoneNumber("+13125550100")
+        .build())
+    .build()).getBrand();
+
+// 2. Draft an agent under the brand
+RcsAgentDetails agent = client.rcs().agents().create(CreateRcsAgentRequest.builder()
+    .brandId(brand.getId())
+    .displayName("Acme")
+    .useCase(RcsAgentUseCase.TRANSACTIONAL)
+    .basics(RcsAgentBasics.builder()
+        .description("Order updates from Acme")
+        .logoUrl("https://acme.example/logo.png")   // public https URL
+        .heroUrl("https://acme.example/hero.png")   // public https URL
+        .brandColor("#0055FF")
+        .privacyPolicyUrl("https://acme.example/privacy")
+        .termsAndConditionsUrl("https://acme.example/terms")
+        .website(new RcsAgentWebsiteContact("https://acme.example", "Visit us"))
+        .build())
+    .build()).getAgent();
+
+// Edit a draft; only the groups you set are changed
+client.rcs().agents().update(agent.getId(), UpdateRcsAgentRequest.builder()
+    .campaign(RcsCampaign.builder()
+        .agentOverview("Shipping and delivery updates for Acme orders")
+        .interactions(List.of(
+            new RcsInteraction(RcsInteractionType.TRANSACTIONAL_UPDATES, "Order status changes")))
+        .messageExamples(List.of(
+            "Your order #4821 has shipped!",
+            "Your order #4821 is out for delivery.",
+            "Your order #4821 was delivered."))
+        .consentSettings(RcsConsentSettings.builder()
+            .optInMethods(List.of(new RcsOptInMethod(RcsOptInMethodType.WEBSITE, "Checkout on acme.example")))
+            .callToAction("Text me order updates")
+            .callToActionUrl("https://acme.example/checkout")
+            .optInMessage("Acme: You're in! Reply STOP to opt out, HELP for help.")
+            .helpResponse("Acme: Email support@acme.example for help.")
+            .optOutResponse("Acme: You've been unsubscribed.")
+            .build())
+        .build())
+    .build());
+
+// 3. Invite test devices (the list is authoritative; up to 20), then submit
+//    for review. Submit lists anything still missing as field errors.
+client.rcs().agents().setTestDevices(agent.getId(), List.of(
+    new RcsTestDeviceInput("+13125550100", "Sam's phone")));
+try {
+    RcsAgentResponse submitted = client.rcs().agents().submit(agent.getId());
+    System.out.println(submitted.getStage()); // "in_review"
+} catch (ValidationException e) {
+    if (RcsErrorCode.INVALID_CONTENT.equals(e.getApiErrorCode())) {
+        e.getFieldErrors().forEach(f -> System.out.println(f.getPath() + ": " + f.getMessage()));
+    }
+}
+
+// 4. Poll where the registration stands. Once the stage is "testing", send to
+//    your invited devices, then request launch.
+RcsRegistration registration = client.rcs().registration().get();
+System.out.println(registration.getStage()); // draft, in_review, testing, live, ...
+if (RcsCustomerStage.TESTING.equals(registration.getStage())) {
+    client.rcs().agents().requestLaunch(agent.getId(), RcsLaunchRequest.builder()
+        .testUrl("https://acme.example/rcs-test")
+        .build());
+}
+
+// Writes accept your own idempotency key, like every other write
+client.rcs().agents().submit(agent.getId(), new IdempotentRequestOptions("submit-" + agent.getId()));
+```
+
+### Send
+
+```java
+// 1. Find your agent — "testing" reaches invited test devices only,
 //    "approved" reaches everyone.
 RcsAgentsResponse agents = client.rcs().agents().list();
 for (RcsAgent agent : agents.getAgents()) {
-    System.out.println(agent.getName() + " (" + agent.getStatus() + ", sendable=" + agent.isSendable() + ")");
+    System.out.println(agent.getName() + " (" + agent.getStage() + ", sendable=" + agent.isSendable() + ")");
 }
 
 // 2. Optional pre-flight: can this recipient receive RCS?

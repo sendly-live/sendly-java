@@ -25,8 +25,12 @@ import com.sendly.resources.WhatsAppResource;
 import com.sendly.resources.RcsResource;
 import okhttp3.*;
 
+import com.google.gson.JsonElement;
+
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -295,7 +299,7 @@ public class Sendly {
     }
 
     /**
-     * Get the RCS resource (agents, recipient capability).
+     * Get the RCS resource (registration, agents, recipient capability).
      *
      * @return RCS resource
      */
@@ -458,6 +462,25 @@ public class Sendly {
      * @throws SendlyException if the request fails
      */
     public JsonObject put(String path, Object body) throws SendlyException {
+        return put(path, body, null);
+    }
+
+    /**
+     * Make a PUT request with a caller-supplied idempotency key.
+     * <p>
+     * Unlike {@link #post(String, Object)}, no key is generated automatically
+     * for PUT; the header is sent only when {@code idempotencyKey} is given.
+     * </p>
+     *
+     * @param path           API endpoint path
+     * @param body           Request body
+     * @param idempotencyKey Idempotency key for this request (1-255 printable
+     *                       ASCII characters), or null to send none
+     * @return Response as JsonObject
+     * @throws SendlyException if the request fails
+     */
+    public JsonObject put(String path, Object body, String idempotencyKey) throws SendlyException {
+        String key = normalizeIdempotencyKey(idempotencyKey);
         String json = gson.toJson(body);
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
@@ -468,6 +491,9 @@ public class Sendly {
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Accept", "application/json")
                 .addHeader("User-Agent", "sendly-java/" + VERSION);
+        if (key != null) {
+            reqBuilder.addHeader("Idempotency-Key", key);
+        }
         if (organizationId != null && !organizationId.isEmpty()) {
             reqBuilder.addHeader("X-Organization-Id", organizationId);
         }
@@ -507,6 +533,25 @@ public class Sendly {
      * @throws SendlyException if the request fails
      */
     public JsonObject patch(String path, Object body) throws SendlyException {
+        return patch(path, body, null);
+    }
+
+    /**
+     * Make a PATCH request with a caller-supplied idempotency key.
+     * <p>
+     * Unlike {@link #post(String, Object)}, no key is generated automatically
+     * for PATCH; the header is sent only when {@code idempotencyKey} is given.
+     * </p>
+     *
+     * @param path           API endpoint path
+     * @param body           Request body
+     * @param idempotencyKey Idempotency key for this request (1-255 printable
+     *                       ASCII characters), or null to send none
+     * @return Response as JsonObject
+     * @throws SendlyException if the request fails
+     */
+    public JsonObject patch(String path, Object body, String idempotencyKey) throws SendlyException {
+        String key = normalizeIdempotencyKey(idempotencyKey);
         String json = gson.toJson(body);
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
@@ -517,6 +562,9 @@ public class Sendly {
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Accept", "application/json")
                 .addHeader("User-Agent", "sendly-java/" + VERSION);
+        if (key != null) {
+            reqBuilder.addHeader("Idempotency-Key", key);
+        }
         if (organizationId != null && !organizationId.isEmpty()) {
             reqBuilder.addHeader("X-Organization-Id", organizationId);
         }
@@ -745,7 +793,7 @@ public class Sendly {
             JsonObject error = body.isEmpty() ? new JsonObject() : gson.fromJson(body, JsonObject.class);
             String message = error.has("message") ? error.get("message").getAsString() : "Unknown error";
 
-            throw switch (response.code()) {
+            SendlyException mapped = switch (response.code()) {
                 case 401 -> new AuthenticationException(message);
                 case 402 -> new InsufficientCreditsException(message);
                 case 404 -> new NotFoundException(message);
@@ -757,9 +805,33 @@ public class Sendly {
                 case 400, 422 -> new ValidationException(message);
                 default -> new SendlyException(message, response.code());
             };
+            throw mapped.withApiError(apiErrorCodeOf(error), fieldErrorsOf(error));
         } catch (IOException e) {
             throw new NetworkException("Request failed: " + e.getMessage());
         }
+    }
+
+    private static String apiErrorCodeOf(JsonObject error) {
+        JsonElement code = error.get("error");
+        return code != null && code.isJsonPrimitive() ? code.getAsString() : null;
+    }
+
+    private static List<SendlyException.FieldError> fieldErrorsOf(JsonObject error) {
+        JsonElement errors = error.get("errors");
+        if (errors == null || !errors.isJsonArray()) {
+            return null;
+        }
+        List<SendlyException.FieldError> out = new ArrayList<>();
+        for (JsonElement e : errors.getAsJsonArray()) {
+            if (!e.isJsonObject()) {
+                continue;
+            }
+            JsonObject o = e.getAsJsonObject();
+            String path = o.has("path") && !o.get("path").isJsonNull() ? o.get("path").getAsString() : null;
+            String msg = o.has("message") && !o.get("message").isJsonNull() ? o.get("message").getAsString() : null;
+            out.add(new SendlyException.FieldError(path, msg));
+        }
+        return out;
     }
 
     /**

@@ -11,6 +11,7 @@ public class RcsAgent {
     private String status;
     private String useCase;
     private boolean sendable;
+    private String stage;
     private String createdAt;
 
     public RcsAgent() {}
@@ -30,6 +31,9 @@ public class RcsAgent {
         }
         if (json.has("sendable") && !json.get("sendable").isJsonNull()) {
             this.sendable = json.get("sendable").getAsBoolean();
+        }
+        if (json.has("stage") && !json.get("stage").isJsonNull()) {
+            this.stage = json.get("stage").getAsString();
         }
         if (json.has("createdAt") && !json.get("createdAt").isJsonNull()) {
             this.createdAt = json.get("createdAt").getAsString();
@@ -53,6 +57,9 @@ public class RcsAgent {
 
     /** True when the agent can send right now. */
     public boolean isSendable() { return sendable; }
+
+    /** Where the agent sits in the registration journey; see {@link RcsCustomerStage}. */
+    public String getStage() { return stage; }
 
     /** ISO 8601 timestamp when the agent was registered. */
     public String getCreatedAt() { return createdAt; }

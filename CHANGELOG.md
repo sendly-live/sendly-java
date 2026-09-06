@@ -1,5 +1,25 @@
 # sendly-java
 
+## Unreleased
+
+### Minor Changes
+
+- **Self-serve RCS registration on `rcs()`.** Draft a brand and an agent, invite test devices, submit for review by Sendly, and request launch, all from the API. Sendly reviews the registration and passes it to the carrier network; the API mirrors what the dashboard can do (approval and launch remain with Sendly). Ten new operations, nested the way `agents()` already is: `rcs().registration().get()`, `rcs().dossier().get()`, `rcs().brands().create(...)` / `update(...)`, and `rcs().agents().create(...)` / `get(...)` / `update(...)` / `setTestDevices(...)` / `submit(...)` / `requestLaunch(...)`. Every write also takes an `IdempotentRequestOptions` overload. Registration calls need an API key with the `rcs:read` / `rcs:write` scopes and, like the rest of RCS, answer 404 (`rcs_not_enabled`, a `NotFoundException`) until the `rcs_channel` flag is on for your account.
+
+  Assets can't be uploaded over the API: `logoUrl`, `heroUrl` and `callToActionMediaUrl` must already be public `https://` URLs (422 `rcs_invalid_content` otherwise). Upload files from the dashboard.
+
+  New models: `RcsBrandInput` (with `RcsBrandAddress`, `RcsBrandContact`), `RcsBrand`, `RcsBrandResponse`, `CreateRcsAgentRequest`, `UpdateRcsAgentRequest`, `RcsAgentBasics` (with `RcsAgentPhoneContact`, `RcsAgentWebsiteContact`, `RcsAgentEmailContact`), `RcsCampaign`, `RcsInteraction`, `RcsConsentSettings`, `RcsOptInMethod`, `RcsTesting`, `RcsAgentDetails`, `RcsAgentResponse`, `RcsTestDevice`, `RcsTestDeviceInput`, `RcsTestDevicesResponse`, `RcsLaunchRequest`, `RcsRegistration`, `RcsDossier`, and the string-constant classes `RcsCustomerStage`, `RcsReviewStatus`, `RcsErrorCode`, `RcsLegalEntityType`, `RcsOrganizationType`, `RcsAgentUseCase`, `RcsInteractionType`, `RcsOptInMethodType`.
+
+- **`RcsAgent.getStage()`** on `rcs().agents().list()` items: where each agent sits in the registration journey (`RcsCustomerStage`).
+
+- **`SendlyException.getApiErrorCode()` and `getFieldErrors()`.** Every mapped error now carries the response body's `error` string (e.g. `rcs_field_locked` vs `rcs_launch_not_ready`, both 409s) and its `errors` array as `SendlyException.FieldError` (path + message). `getErrorCode()` is unchanged and still returns the per-class constant. Populated for every resource, not just RCS.
+
+- **`patch(path, body, idempotencyKey)` and `put(path, body, idempotencyKey)`** on the client send a caller-supplied `Idempotency-Key` on PATCH and PUT. No key is generated automatically for those methods; the two-argument forms behave exactly as before.
+
+### Not changed in this release
+
+- No public members were deprecated, renamed or removed. `rcs().agents().list()` and `rcs().capability(...)` are untouched.
+
 ## 3.38.0
 
 ### Minor Changes
